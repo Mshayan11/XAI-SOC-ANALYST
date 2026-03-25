@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alert Investigation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="dashboard-shell">
+        <aside class="sidebar">
+            <div class="logo-block">
+                <h1>AI Cyber Radar</h1>
+                <p>SOC Analyst Workstation</p>
+            </div>
+            <div class="menu-block">
+                <a class="menu-item active" href="{{ url_for('main.home') }}">Back to Dashboard</a>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <header class="topbar">
+                <div>
+                    <h2>Alert Investigation</h2>
+                    <p>{{ alert.id }} • {{ alert.event_type }}</p>
+                </div>
+                <div class="topbar-actions">
+                    <button class="print-btn" onclick="window.print()">Export Investigation Report</button>
+                </div>
+            </header>
+
+            {% if saved_message %}
+            <div class="notice-box">
+                {{ saved_message }}
+            </div>
+            {% endif %}
+
+            <section class="detail-grid">
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3>Alert Context</h3>
+                    </div>
+                    <div class="detail-list">
+                        <div><strong>Timestamp:</strong> {{ alert.timestamp }}</div>
+                        <div><strong>Source IP:</strong> {{ alert.src_ip }}</div>
+                        <div><strong>Destination IP:</strong> {{ alert.dst_ip }}</div>
+                        <div><strong>Protocol:</strong> {{ alert.protocol }}</div>
+                        <div><strong>Event Type:</strong> {{ alert.event_type }}</div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-header severity-row">
+                        <h3>Classification</h3>
+                        <span class="badge {{ result.severity_class }}">{{ result.severity }}</span>
+                    </div>
+
+                    <p><strong>Risk Score:</strong> {{ result.score }}/5</p>
+                    <p><strong>Recommended Action:</strong> {{ result.recommended_action }}</p>
+
+                    {% set sev_conf = result.confidence.get(result.severity, 0) %}
+                    {% if sev_conf < 80 %}
+                    <div class="warning-box">
+                        Low model confidence detected ({{ sev_conf }}%). Analyst validation is strongly recommended before taking action.
+                    </div>
+                    {% endif %}
+
+                    {% if result.false_positive_risk %}
+                    <div class="fp-box">
+                        Possible false-positive risk detected — this alert should be validated with supporting logs before escalation.
+                    </div>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="detail-grid">
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3>MITRE ATT&CK Mapping</h3>
+                    </div>
+                    <div class="detail-list">
+                        <div><strong>Tactic:</strong> {{ mitre.tactic }}</div>
+                        <div><strong>Technique ID:</strong> {{ mitre.technique }}</div>
+                        <div><strong>Technique Name:</strong> {{ mitre.name }}</div>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3>Threat Intelligence</h3>
+                    </div>
+                    <div class="detail-list">
+                        <div><strong>IP Address:</strong> {{ ip_intel.ip }}</div>
+                        <div><strong>Country:</strong> {{ ip_intel.country }}</div>
+                        <div><strong>Reputation:</strong> {{ ip_intel.reputation }}</div>
+                        <div><strong>Threat Feed Matches:</strong> {{ ip_intel.threat_feeds }}</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="detail-grid">
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3>Explainable AI Factors</h3>
+                    </div>
+                    <ul class="factor-list">
+                        {% for factor in result.top_factors %}
+                            {% if factor.feature == "xai_error" %}
+                                <li>XAI unavailable: {{ factor.message }}</li>
+                            {% else %}
+                                <li>
+                                    <strong>{{ factor.label }}</strong> — value {{ factor.value }}
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+
+                    <div class="ai-box">
+                        <h4>Claude Analyst Explanation</h4>
+                        <p>{{ llm_output.analyst_explanation }}</p>
+                    </div>
+                </div>
+
+                <div class="panel-card">
+                    <div class="panel-header">
+                        <h3>SOC Investigation Summary</h3>
+                    </div>
+
+                    <div class="ai-box">
+                        <h4>Claude Triage Summary</h4>
+                        <p>{{ llm_output.triage_summary }}</p>
+
+                        <h4>False Positive Considerations</h4>
+                        <p>{{ llm_output.false_positive_considerations }}</p>
+
+                        <h4>Recommended Next Steps</h4>
+                        <ul class="factor-list">
+                            {% for step in llm_output.next_steps %}
+                                <li>{{ step }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <form method="post" action="{{ url_for('main.submit_triage', alert_id=alert.id) }}">
+                        {% if alert.id == "USER-ALERT" %}
+                        <input type="hidden" name="timestamp" value="{{ alert.timestamp }}">
+                        <input type="hidden" name="event_type" value="{{ alert.event_type }}">
+                        <input type="hidden" name="src_ip" value="{{ alert.src_ip }}">
+                        <input type="hidden" name="dst_ip" value="{{ alert.dst_ip }}">
+                        <input type="hidden" name="protocol" value="{{ alert.protocol }}">
+                        <input type="hidden" name="src_bytes" value="{{ alert.src_bytes }}">
+                        <input type="hidden" name="dst_bytes" value="{{ alert.dst_bytes }}">
+                        <input type="hidden" name="duration" value="{{ alert.duration }}">
+                        <input type="hidden" name="failed_logins" value="{{ alert.failed_logins }}">
+                        <input type="hidden" name="num_compromised" value="{{ alert.num_compromised }}">
+                        <input type="hidden" name="raw_log" value="{{ raw_log or '' }}">
+                        {% endif %}
+
+                        <label for="verdict">Analyst Verdict</label>
+                        <select name="verdict" id="verdict">
+                            <option value="">Select verdict</option>
+                            <option value="Confirmed malicious">Confirmed malicious</option>
+                            <option value="Suspicious - needs more investigation">Suspicious - needs more investigation</option>
+                            <option value="Likely false positive">Likely false positive</option>
+                            <option value="Benign activity">Benign activity</option>
+                        </select>
+
+                        <label for="analyst_notes">Analyst Notes</label>
+                        <textarea name="analyst_notes" id="analyst_notes" rows="7" placeholder="Add your investigation notes here..."></textarea>
+
+                        <button type="submit">Save Analyst Feedback</button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-header">
+                    <h3>Attack Timeline</h3>
+                    <p>Chronological summary of the alert investigation flow</p>
+                </div>
+
+                <div class="timeline-list">
+                    {% for item in attack_timeline %}
+                    <div class="timeline-item">
+                        {{ item }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-header">
+                    <h3>Feedback History</h3>
+                    <p>Stored analyst decisions for this alert</p>
+                </div>
+
+                {% if feedback_history %}
+                    <div class="feedback-history">
+                        {% for item in feedback_history %}
+                        <div class="feedback-item">
+                            <div><strong>Time:</strong> {{ item.timestamp }}</div>
+                            <div><strong>Verdict:</strong> {{ item.verdict }}</div>
+                            <div><strong>Severity at time of review:</strong> {{ item.severity }}</div>
+                            <div><strong>Notes:</strong> {{ item.analyst_notes or "No notes added." }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No analyst feedback saved for this alert yet.</p>
+                {% endif %}
+            </section>
+        </main>
+    </div>
+</body>
+</html>

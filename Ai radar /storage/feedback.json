@@ -1,0 +1,10 @@
+[
+  {
+    "timestamp": "2026-03-10T01:52:14.275681Z",
+    "alert_id": "USER-ALERT",
+    "event_type": "User Submitted Alert",
+    "severity": "Low",
+    "verdict": "Likely false positive",
+    "analyst_notes": "asdada"
+  }
+]

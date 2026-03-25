@@ -1,0 +1,5 @@
+id,timestamp,src_ip,dst_ip,protocol,event_type,src_bytes,dst_bytes,duration,failed_logins,num_compromised
+CSV-1001,2026-03-10 15:01:10,185.223.91.44,10.0.0.12,TCP,Multiple Failed Login Attempts,5400,6200,78,6,2
+CSV-1002,2026-03-10 15:03:44,192.168.1.15,10.0.0.8,UDP,Port Scan Activity,3200,1800,45,0,1
+CSV-1003,2026-03-10 15:05:02,172.16.0.21,10.0.0.25,TCP,Normal Internal Traffic,180,350,11,0,0
+CSV-1004,2026-03-10 15:08:29,91.240.118.7,10.0.0.19,TCP,Suspicious Process Communication,900,1500,20,1,1

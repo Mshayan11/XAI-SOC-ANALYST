@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Cyber Radar SOC Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="dashboard-shell">
+        <aside class="sidebar">
+            <div class="logo-block">
+                <h1>AI Cyber Radar</h1>
+                <p>SOC Analyst Workstation</p>
+            </div>
+
+            <div class="menu-block">
+                <div class="menu-item active">Dashboard</div>
+                <div class="menu-item">Investigations</div>
+                <div class="menu-item">Playbooks</div>
+                <div class="menu-item">Triage Reports</div>
+                <div class="menu-item">False Positives</div>
+            </div>
+        </aside>
+
+        <main class="main-panel">
+            <header class="topbar">
+                <div>
+                    <h2>Threat Operations Dashboard</h2>
+                    <p>AI-assisted triage, explainability, analyst reporting, feedback learning, CSV ingestion, MITRE mapping, and threat intelligence</p>
+                </div>
+            </header>
+
+            {% if upload_message %}
+            <div class="notice-box">
+                {{ upload_message }}
+            </div>
+            {% endif %}
+
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <span>Total Alerts</span>
+                    <strong>{{ total_alerts }}</strong>
+                </div>
+                <div class="stat-card">
+                    <span>High Severity</span>
+                    <strong>{{ high_count }}</strong>
+                </div>
+                <div class="stat-card">
+                    <span>Medium Severity</span>
+                    <strong>{{ medium_count }}</strong>
+                </div>
+                <div class="stat-card">
+                    <span>Low Severity</span>
+                    <strong>{{ low_count }}</strong>
+                </div>
+            </section>
+
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <span>Feedback Entries</span>
+                    <strong>{{ feedback_summary.total_feedback }}</strong>
+                </div>
+                <div class="stat-card">
+                    <span>False Positives</span>
+                    <strong>{{ feedback_summary.false_positive_count }}</strong>
+                </div>
+                <div class="stat-card">
+                    <span>Confirmed Malicious</span>
+                    <strong>{{ feedback_summary.confirmed_malicious_count }}</strong>
+                </div>
+                <div class="stat-card">
+                    <span>Benign Activity</span>
+                    <strong>{{ feedback_summary.benign_count }}</strong>
+                </div>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-header">
+                    <h3>Filter Alerts</h3>
+                    <p>Search and narrow the active alerts queue</p>
+                </div>
+
+                <form method="get" action="{{ url_for('main.home') }}" class="filter-bar">
+                    <input
+                        type="text"
+                        name="search"
+                        placeholder="Search event type, source IP, or destination IP..."
+                        value="{{ current_search }}"
+                    >
+
+                    <select name="severity">
+                        <option value="" {% if not current_severity %}selected{% endif %}>All Severity</option>
+                        <option value="High" {% if current_severity == "High" %}selected{% endif %}>High</option>
+                        <option value="Medium" {% if current_severity == "Medium" %}selected{% endif %}>Medium</option>
+                        <option value="Low" {% if current_severity == "Low" %}selected{% endif %}>Low</option>
+                    </select>
+
+                    <button type="submit">Filter</button>
+                </form>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-header">
+                    <h3>Upload Alert CSV</h3>
+                    <p>Upload multiple alerts into the SOC queue</p>
+                </div>
+
+                <form method="post" action="{{ url_for('main.upload_csv') }}" enctype="multipart/form-data">
+                    <label for="alerts_file">Select CSV File</label>
+                    <input type="file" name="alerts_file" id="alerts_file" accept=".csv">
+                    <button type="submit">Upload CSV</button>
+                </form>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-header">
+                    <h3>Submit New Alert</h3>
+                    <p>Paste a raw log or enter structured alert details for AI triage</p>
+                </div>
+
+                <form method="post" action="{{ url_for('main.analyse_user_alert') }}">
+                    <label for="raw_log">Paste Raw Log</label>
+                    <textarea
+                        name="raw_log"
+                        id="raw_log"
+                        rows="10"
+                        placeholder="timestamp=2026-03-10 14:22:10
+src_ip=185.223.91.44
+dst_ip=10.0.0.12
+protocol=TCP
+event_type=failed_login
+src_bytes=5400
+dst_bytes=6200
+duration=78
+failed_logins=6
+num_compromised=2"></textarea>
+
+                    <div class="detail-grid">
+                        <div>
+                            <label for="timestamp">Timestamp</label>
+                            <input type="text" name="timestamp" id="timestamp" placeholder="2026-03-10 14:22:10">
+                        </div>
+                        <div>
+                            <label for="event_type">Event Type</label>
+                            <input type="text" name="event_type" id="event_type" placeholder="Multiple Failed Login Attempts">
+                        </div>
+                        <div>
+                            <label for="src_ip">Source IP</label>
+                            <input type="text" name="src_ip" id="src_ip" placeholder="185.223.91.44">
+                        </div>
+                        <div>
+                            <label for="dst_ip">Destination IP</label>
+                            <input type="text" name="dst_ip" id="dst_ip" placeholder="10.0.0.12">
+                        </div>
+                        <div>
+                            <label for="protocol">Protocol</label>
+                            <input type="text" name="protocol" id="protocol" placeholder="TCP">
+                        </div>
+                        <div>
+                            <label for="src_bytes">Source Bytes</label>
+                            <input type="number" name="src_bytes" id="src_bytes" placeholder="5400">
+                        </div>
+                        <div>
+                            <label for="dst_bytes">Destination Bytes</label>
+                            <input type="number" name="dst_bytes" id="dst_bytes" placeholder="6200">
+                        </div>
+                        <div>
+                            <label for="duration">Duration</label>
+                            <input type="number" name="duration" id="duration" placeholder="78">
+                        </div>
+                        <div>
+                            <label for="failed_logins">Failed Logins</label>
+                            <input type="number" name="failed_logins" id="failed_logins" placeholder="6">
+                        </div>
+                        <div>
+                            <label for="num_compromised">Compromise Indicators</label>
+                            <input type="number" name="num_compromised" id="num_compromised" placeholder="2">
+                        </div>
+                    </div>
+
+                    <button type="submit">Analyse Alert</button>
+                </form>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-header">
+                    <h3>Active Alerts Queue</h3>
+                    <p>Prioritised for analyst triage</p>
+                </div>
+
+                <div class="alerts-table-wrap">
+                    <table class="alerts-table">
+                        <thead>
+                            <tr>
+                                <th>Alert ID</th>
+                                <th>Timestamp</th>
+                                <th>Event</th>
+                                <th>Source</th>
+                                <th>Destination</th>
+                                <th>Severity</th>
+                                <th>Confidence</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alert in alerts %}
+                            <tr>
+                                <td>{{ alert.id }}</td>
+                                <td>{{ alert.timestamp }}</td>
+                                <td>{{ alert.event_type }}</td>
+                                <td>{{ alert.src_ip }}</td>
+                                <td>{{ alert.dst_ip }}</td>
+                                <td>
+                                    <span class="badge {{ alert.severity_class }}">{{ alert.severity }}</span>
+                                </td>
+                                <td>{{ alert.confidence.get(alert.severity, 0) }}%</td>
+                                <td>
+                                    <a class="btn-link" href="{{ url_for('main.alert_detail', alert_id=alert.id) }}">Investigate</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

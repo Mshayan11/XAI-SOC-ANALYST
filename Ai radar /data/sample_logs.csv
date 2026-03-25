@@ -1,0 +1,16 @@
+src_bytes,dst_bytes,duration,failed_logins,num_compromised,severity
+120,300,10,0,0,Low
+200,500,12,0,0,Low
+800,1200,20,1,0,Medium
+950,1500,22,1,1,Medium
+3000,4000,60,3,2,High
+5000,7000,75,4,3,High
+140,280,9,0,0,Low
+850,1300,18,1,0,Medium
+4500,6500,80,5,4,High
+180,350,11,0,0,Low
+250,450,13,0,0,Low
+900,1600,25,1,1,Medium
+3200,4200,58,2,2,High
+700,1000,17,1,0,Medium
+5200,7100,85,4,4,High
